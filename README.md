@@ -1,29 +1,13 @@
 # Dashboards
 
-## Tarea Streamlit - Clase 4: Tablero de productos
+## Tarea Streamlit - Clase 4
 
-Tablero interactivo en **Streamlit** (graficas con Plotly) que analiza **precio, margen y unidades vendidas** por producto y categoria.
+Dashboard de productos (precio, margen y unidades) hecho con Streamlit y Plotly.
 
-Carpeta: [`Tarea Streamlit - Clase 4`](./Tarea%20Streamlit%20-%20Clase%204)
-
-### Contenido del tablero
-
-- Filtros (barra lateral): categoria, producto, rango de precio, rango de margen y unidades minimas.
-- Indicadores: productos, unidades, ingresos, utilidad y margen ponderado.
-- 5 graficas: dispersion precio vs. margen, margen promedio por categoria, caja de precios, linea de tendencia con banda de confianza y barras horizontales de unidades.
-
-### Como ejecutarlo
+Ejecución:
 
 ```bash
 cd "Tarea Streamlit - Clase 4"
 pip install -r requirements.txt
 streamlit run streamlit_app.py
 ```
-
-Se abre automaticamente en http://localhost:8501.
-
-### Archivos
-
-- `streamlit_app.py`: aplicacion Streamlit.
-- `05_productos.csv`: datos.
-- `requirements.txt`: dependencias.
