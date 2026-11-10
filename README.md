@@ -24,6 +24,6 @@ Se abre automaticamente en http://localhost:8501.
 
 ### Archivos
 
-- `streamlit_app.py`: aplicacion Streamlit (archivo principal).
-- `dashboard_productos.py`: datos y funciones de graficas (tambien incluye una version anterior en Dash).
+- `streamlit_app.py`: aplicacion Streamlit.
 - `05_productos.csv`: datos.
+- `requirements.txt`: dependencias.
