@@ -1,0 +1,13 @@
+producto,categoria,precio,unidades,margen_pct
+Teclado,Tecnología,45,1200,32
+Mouse,Tecnología,28,1800,41
+Monitor,Tecnología,320,210,22
+Silla,Muebles,480,150,18
+Escritorio,Muebles,620,90,15
+Lámpara,Muebles,75,340,38
+Cuaderno,Papelería,12,2400,55
+Bolígrafo,Papelería,3,5200,62
+Agenda,Papelería,25,1100,48
+Audífonos,Tecnología,180,380,27
+Estante,Muebles,390,110,20
+Marcadores,Papelería,18,900,45
