@@ -1,20 +1,3 @@
-"""
-Tablero de productos en Streamlit
-=================================
-Analiza precio, margen y unidades vendidas a partir de 05_productos.csv.
-Graficas (Plotly):
-    4.1  Dispersion            (precio vs. margen, color = categoria)
-    4.3  Barras                (margen promedio por categoria)
-    4.7  Caja                  (precio por categoria)
-    4.11 Linea de tendencia    (regresion lineal precio -> margen, con banda de confianza)
-    4.12 Barras horizontales   (unidades vendidas por producto)
-
-Uso
----
-    pip install -r requirements.txt
-    streamlit run streamlit_app.py
-"""
-
 from pathlib import Path
 
 import numpy as np
@@ -23,9 +6,6 @@ import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
 
-# ======================================================================================
-# CONFIGURACIÓN
-# ======================================================================================
 COLOR_PRINCIPAL = "#187D80"
 COLOR_SECUNDARIO = "#E8A33D"
 COLOR_TERCIARIO = "#6C3483"
@@ -37,9 +17,6 @@ PALETA = {"Tecnología": COLOR_PRINCIPAL, "Muebles": COLOR_SECUNDARIO, "Papeler�
 RUTA_CSV = Path(__file__).resolve().parent / "05_productos.csv"
 
 
-# ======================================================================================
-# A. DATOS
-# ======================================================================================
 def cargar_datos(ruta=RUTA_CSV):
     datos = pd.read_csv(ruta, encoding="utf-8")
     datos["categoria"] = pd.Categorical(datos["categoria"], categories=CATEGORIAS, ordered=True)
@@ -48,9 +25,27 @@ def cargar_datos(ruta=RUTA_CSV):
     return datos
 
 
-# ======================================================================================
-# B. GRÁFICOS
-# ======================================================================================
+def filtrar(datos, categorias, productos, precio, margen, unidades_min):
+    s = (datos["categoria"].isin(categorias or []) & datos["producto"].isin(productos or [])
+         & datos["precio"].between(*precio) & datos["margen_pct"].between(*margen)
+         & (datos["unidades"] >= unidades_min))
+    return datos[s]
+
+
+def indicadores_clave(d):
+    if d.empty:
+        return [("Productos", "0"), ("Unidades vendidas", "—"), ("Ingresos", "—"),
+                ("Utilidad", "—"), ("Margen ponderado", "—")]
+    margen_pond = d["utilidad"].sum() / d["ingresos"].sum() * 100
+    return [
+        ("Productos", f"{len(d)}"),
+        ("Unidades vendidas", f"{d['unidades'].sum():,.0f}"),
+        ("Ingresos", f"${d['ingresos'].sum():,.0f}"),
+        ("Utilidad", f"${d['utilidad'].sum():,.0f}"),
+        ("Margen ponderado", f"{margen_pond:.1f} %"),
+    ]
+
+
 def _estilo(figura, titulo, leyenda=True):
     figura.update_layout(
         template="plotly_white",
@@ -72,7 +67,6 @@ def _figura_vacia(mensaje="Sin datos para los filtros seleccionados"):
 
 
 def grafico_dispersion(d):
-    """4.1 Dispersión: precio vs. margen."""
     f = px.scatter(d, x="precio", y="margen_pct", color="categoria", size="unidades", size_max=34,
                    hover_name="producto", opacity=0.75, color_discrete_map=PALETA,
                    category_orders={"categoria": CATEGORIAS},
@@ -83,7 +77,6 @@ def grafico_dispersion(d):
 
 
 def grafico_barras(d):
-    """4.3 Barras: margen promedio por categoría."""
     r = d.groupby("categoria", observed=True)["margen_pct"].mean().reset_index()
     f = px.bar(r, x="categoria", y="margen_pct", color="categoria", color_discrete_map=PALETA,
                text=r["margen_pct"].map("{:.1f}%".format),
@@ -94,7 +87,6 @@ def grafico_barras(d):
 
 
 def grafico_caja(d):
-    """4.7 Caja: distribución del precio por categoría."""
     f = px.box(d, x="categoria", y="precio", color="categoria", points="all", hover_name="producto",
                color_discrete_map=PALETA, category_orders={"categoria": CATEGORIAS},
                labels={"categoria": "Categoría", "precio": "Precio ($)"})
@@ -102,7 +94,6 @@ def grafico_caja(d):
 
 
 def grafico_tendencia(d):
-    """4.11 Línea de tendencia lineal precio -> margen, con banda de confianza del 95 %."""
     if len(d) < 2 or d["precio"].nunique() < 2:
         return _figura_vacia("Se necesitan al menos 2 productos con precios distintos")
     x, y = d["precio"].to_numpy(float), d["margen_pct"].to_numpy(float)
@@ -116,7 +107,6 @@ def grafico_tendencia(d):
         s = np.sqrt(((y - (intercepto + pendiente * x)) ** 2).sum() / (n - 2))
         sxx = ((x - x.mean()) ** 2).sum()
         error = s * np.sqrt(1 / n + (cuadricula - x.mean()) ** 2 / sxx)
-        # valor crítico t(0.975, n-2); para n > 12 se aproxima con 2.0
         t = {3: 12.71, 4: 4.30, 5: 3.18, 6: 2.78, 7: 2.57, 8: 2.45, 9: 2.37, 10: 2.31, 11: 2.26,
              12: 2.23}.get(n, 2.0)
         f.add_scatter(x=np.r_[cuadricula, cuadricula[::-1]], y=np.r_[ajuste + t * error, (ajuste - t * error)[::-1]],
@@ -133,8 +123,7 @@ def grafico_tendencia(d):
 
 
 def grafico_barras_horizontales(d, orden="desc", top=None):
-    """4.12 Barras horizontales: unidades por producto."""
-    r = d.sort_values("unidades", ascending=(orden == "desc"))   # en horizontal, lo último queda arriba
+    r = d.sort_values("unidades", ascending=(orden == "desc"))
     if top:
         r = r.tail(top)
     f = px.bar(r, x="unidades", y="producto", orientation="h", color="categoria", color_discrete_map=PALETA,
@@ -146,31 +135,7 @@ def grafico_barras_horizontales(d, orden="desc", top=None):
     return _estilo(f, "Unidades vendidas por producto")
 
 
-def indicadores_clave(d):
-    if d.empty:
-        return [("Productos", "0"), ("Unidades vendidas", "—"), ("Ingresos estimados", "—"),
-                ("Utilidad estimada", "—"), ("Margen ponderado", "—")]
-    margen_pond = d["utilidad"].sum() / d["ingresos"].sum() * 100
-    return [
-        ("Productos", f"{len(d)}"),
-        ("Unidades vendidas", f"{d['unidades'].sum():,.0f}"),
-        ("Ingresos estimados", f"${d['ingresos'].sum():,.0f}"),
-        ("Utilidad estimada", f"${d['utilidad'].sum():,.0f}"),
-        ("Margen ponderado", f"{margen_pond:.1f} %"),
-    ]
-
-
-def filtrar(datos, categorias, productos, precio, margen, unidades_min):
-    s = (datos["categoria"].isin(categorias or []) & datos["producto"].isin(productos or [])
-         & datos["precio"].between(*precio) & datos["margen_pct"].between(*margen)
-         & (datos["unidades"] >= unidades_min))
-    return datos[s]
-
-
-# ======================================================================================
-# APLICACION STREAMLIT
-# ======================================================================================
-st.set_page_config(page_title="Tablero de productos", page_icon="📊", layout="wide")
+st.set_page_config(page_title="Dashboard de productos", page_icon="📊", layout="wide")
 
 
 @st.cache_data
@@ -180,11 +145,8 @@ def datos_base():
 
 datos = datos_base()
 
-st.title("Análisis de productos · Precio, margen y unidades")
-st.caption("Explora cómo se relacionan el precio, el margen y las ventas por categoría y producto. "
-           "Los filtros de la barra lateral actualizan los indicadores y las cinco gráficas.")
+st.title("Dashboard de productos")
 
-# ---- Filtros -------------------------------------------------------------------------
 with st.sidebar:
     st.header("Filtros")
     categorias = st.multiselect("Categoría", CATEGORIAS, default=CATEGORIAS)
@@ -197,15 +159,13 @@ with st.sidebar:
 
 d = filtrar(datos, categorias, productos, precio, margen, unidades_min)
 
-# ---- Indicadores ---------------------------------------------------------------------
 for col, (titulo, valor) in zip(st.columns(5), indicadores_clave(d)):
     col.metric(titulo, valor)
 
-# ---- Gráficas ------------------------------------------------------------------------
 if d.empty:
     st.plotly_chart(_figura_vacia(), width='stretch')
 else:
-    pestanas = st.tabs(["4.1 Dispersión", "4.3 Barras", "4.7 Caja", "4.11 Tendencia", "4.12 Barras horizontales"])
+    pestanas = st.tabs(["Dispersión", "Barras", "Caja", "Tendencia", "Barras horizontales"])
     with pestanas[0]:
         st.plotly_chart(grafico_dispersion(d), width='stretch')
     with pestanas[1]:
@@ -220,6 +180,3 @@ else:
                          horizontal=True)
         top = c2.selectbox("Mostrar", [0, 3, 5, 8], format_func=lambda n: "Todos" if n == 0 else f"Top {n}")
         st.plotly_chart(grafico_barras_horizontales(d, orden, top), width='stretch')
-
-with st.expander("Ver datos"):
-    st.dataframe(d, width='stretch', hide_index=True)
